@@ -90,8 +90,21 @@ jobs:
             - name: Print config file
               run: cat ~/.kube/config
 
-            - name: Login to ECR
-              run: kubectl create secret docker-registry regcred --docker-server=${{ secrets.REGISTRY }} --docker-username=AWS  --docker-password=$(aws ecr get-login-password) 
+            - name: Check if regcred exists
+              id: check-regcred
+              run: |
+                kubectl get secret regcred || echo "regcred not found"
+
+            - name: Delete existing regcred (if exists)
+              if: steps.check-regcred.outputs.exitcode == '0'
+              run: kubectl delete secret regcred
+
+            - name: Login to ECR and create regcred secret
+              run: kubectl create secret docker-registry regcred --docker-server=${{ secrets.REGISTRY }} --docker-username=AWS --docker-password=$(aws ecr get-login-password)
+  
+
+            # - name: Login to ECR
+            #   run: kubectl create secret docker-registry regcred --docker-server=${{ secrets.REGISTRY }} --docker-username=AWS  --docker-password=$(aws ecr get-login-password) 
       
             - name: Deploy Helm
               uses: bitovi/github-actions-deploy-eks-helm@v1.2.8
